@@ -1,0 +1,12 @@
+<%- include("head.partial.ejs") %>
+
+<main>
+  <h1><%= title %></h1>
+  <ul id="posty">
+    <% posty.forEach(function(post){ %>
+    <li><a href="/cards/<%= post.id %>"><%= post.name %></a></li>
+    <% }) %>
+  </ul>
+</main>
+
+<%- include("foot.partial.ejs") %>

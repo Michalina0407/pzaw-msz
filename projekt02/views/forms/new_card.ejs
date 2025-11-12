@@ -1,0 +1,33 @@
+<form action="/cards/<%=post.id%>/new" method="POST">
+  <div>
+    <label for="kom_front">nazwa uzytkownika</label>
+    <input
+      type="text"
+      name="front"
+      id="kom_front"
+      required
+      minlength="1"
+      maxlength="500"
+      <% if (locals.front){ %>
+      value="<%= front %>"
+      <% }%>
+    />
+  </div>
+  <div>
+    <label for="kom_back">twoj komentarz</label>
+    <input
+      type="text"
+      name="back"
+      id="kom_front"
+      required
+      minlength="1"
+      maxlength="500"
+      <% if (locals.back){ %>
+      value="<%= back %>"
+      <% }%>
+    />
+  </div>
+  <div>
+    <button>Dodaj</button>
+  </div>
+</form>
