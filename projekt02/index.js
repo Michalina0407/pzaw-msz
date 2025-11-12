@@ -8,6 +8,10 @@ app.set("view engine", "ejs");
 app.use(express.static("public"));
 app.use(express.urlencoded());
 
+app.get("/", (req, res) => {
+   res.redirect("/cards");
+});
+
 app.get("/cards", (req, res) => {
   res.render("posty", {
     title: "Wybierz co chcesz skomentowac",
@@ -17,6 +21,7 @@ app.get("/cards", (req, res) => {
 
 app.get("/cards/:post_id", (req, res) => {
   const post = komentarze.getpost(req.params.post_id);
+  console.log("Post:", post); 
   if (post != null) {
     res.render("post", {
       title: post.name,

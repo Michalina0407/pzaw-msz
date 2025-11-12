@@ -1,6 +1,7 @@
 const kom_posty = {
   "kiciaczek": {
     name: "kicia-kocia",
+    content: "Co sądzicie o ostatnim odcinku kici koci?",
     cards: [
       { front: "uzytkownik1", back: "super!" },
       { front: "maciek", back: "nie podobalo mi sie" },
@@ -9,6 +10,7 @@ const kom_posty = {
   },
   "podroze": {
     name: "pozdroze_male_i_duze",
+    content: "jak oceniacie biuro podróży ,,walizeczka\"",
     cards: [
       { front: "uzytkownik 2", back: "poznalem tam milosc zycia" },
       { front: "franek", back: "polecam wycieczke do Radomia" },
@@ -17,6 +19,7 @@ const kom_posty = {
   },
   "jedzenie": {
     name: "gdzie_zjesc",
+    content: "Macie może jakieś polecajki na obiad?",
     cards: [
       { front: "uzytkownik 3", back: "kocham restauracje bytom" },
       { front: "olek", back: "w kfc byla fatalna obsluga" },

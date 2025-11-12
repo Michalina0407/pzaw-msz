@@ -1,18 +1,122 @@
-html {
-    background-color: rgb(183, 134, 240);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 11pt;
-}
-
+/* Ogólne */
 body {
-    display: flex;
-    justify-content: center;
-    min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  color: #333;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center; /* wyśrodkowanie poziome */
+  align-items: center;     /* wyśrodkowanie pionowe */
+  min-height: 100vh;
 }
 
-main {
-    background-color: rgb(252, 247, 250);
-    width: 70rem;
-    padding: 1rem;
-    border-radius: 0.5rem;
+/* Kontener główny */
+.container {
+  width: 90%;
+  max-width: 700px;
+  padding: 30px;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #ffffff, #f0f4ff);
+  box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+/* Nagłówki */
+h1, h2 {
+  margin-bottom: 20px;
+  color: #4A90E2; /* przyjemny niebieski akcent */
+  text-shadow: 0 2px 3px rgba(74,144,226,0.3);
+}
+
+/* Lista wpisów */
+ul.entries {
+  list-style-type: none;
+  padding: 0;
+}
+ul.entries li {
+  margin-bottom: 15px;
+  padding: 15px 20px;
+  border-radius: 12px;
+  background-color: #e8f0fe;
+  border-left: 6px solid #4A90E2;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+ul.entries li:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(74,144,226,0.2);
+}
+
+/* Formularz */
+form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 25px;
+  align-items: center;
+}
+form label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #4A90E2;
+}
+form input, form textarea {
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  width: 100%;
+  max-width: 400px;
+}
+form input:focus, form textarea:focus {
+  outline: none;
+  border-color: #4A90E2;
+  box-shadow: 0 0 8px rgba(74,144,226,0.3);
+}
+
+/* Przycisk */
+button {
+  padding: 12px 25px;
+  background-color: #4A90E2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.2s, transform 0.2s;
+}
+button:hover {
+  background-color: #357ABD;
+  transform: scale(1.05);
+}
+
+/* Komunikat błędu */
+.error {
+  color: #D32F2F;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* Footer */
+footer {
+  margin-top: 30px;
+  font-size: 14px;
+  color: #555;
+}
+footer a {
+  color: #4A90E2;
+  text-decoration: none;
+}
+footer a:hover {
+  text-decoration: underline;
+}
+
+.post-content {
+  background-color: #387c93; 
+  color: #f0f0f0;         
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 8px;
 }

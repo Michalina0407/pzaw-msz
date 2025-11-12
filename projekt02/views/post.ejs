@@ -2,15 +2,22 @@
 
 <main>
   <h1><%= title %></h1>
+
+  <div class="post-content">
+    <p><%= post.content %></p>
+  </div>
+
   <ul id="cards">
     <% post.cards.forEach(function(card){ %>
-    <li><%= card.front %> - <%= card.back %></li>
+      <li><%= card.front %> : <%= card.back %></li>
     <% }) %>
   </ul>
+
   <div>
     <h3>Dodaj komentarz</h3>
     <%- include("forms/new_card.ejs") %>
+
+    <p><a href="/cards">Wróć do listy komentarzy</a></p>
   </div>
 </main>
-
 <%- include("foot.partial.ejs") %>
