@@ -9,8 +9,11 @@ app.use(express.static("public"));
 app.use(express.urlencoded());
 
 app.get("/", (req, res) => {
-   res.redirect("/cards");
+  res.render("index", {
+    title: "Witaj w internecie!"
+  });
 });
+
 
 app.get("/cards", (req, res) => {
   res.render("posty", {
