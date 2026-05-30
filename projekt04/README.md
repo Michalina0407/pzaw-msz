@@ -1,33 +1,56 @@
-Tablica Ogłoszeń
-Aplikacja do zarządzania ogłoszeniami zbudowana w technologii Node.js z wykorzystaniem bazy danych SQLite.
+# Tablica Ogłoszeń
 
-Rejestracja i logowanie użytkowników z szyfrowaniem haseł (bcrypt).
-Autoryzacja i obsługa sesji użytkownika.
-Przeglądanie ogłoszeń wszystkich użytkowników na wspólnej tablicy.
-Dodawanie, edytowanie oraz usuwanie własnych postów.
-Uprawnienia administratora: możliwość edycji i usuwania dowolnego posta.
-Wybór motywu kolorystycznego (jasny/ciemny).
-Pasek informacyjny o wykorzystaniu plików cookies (Cookie Consent).
+Prosta aplikacja webowa do zarządzania ogłoszeniami napisana w Node.js z użyciem Express oraz SQLite. Projekt umożliwia rejestrację użytkowników, logowanie oraz tworzenie, edycję i usuwanie ogłoszeń.
 
+# Funkcjonalności
+- Rejestracja i logowanie użytkowników
+- Zabezpieczenie haseł
+- System sesji użytkowników
+- Dodawanie ogłoszeń
+- Przeglądanie ogłoszeń wszystkich użytkowników
+- Edycja i usuwanie własnych ogłoszeń
+- Uprawnienia administratora
+- Tryb jasny / ciemny (cookies)
+- Dane testowe (seed bazy)
 
-Instalacja bibliotek:
-npm install express express-session cookie-parser sqlite3 bcryptjs
+# Bezpieczeństwo
+- Hasła przechowywane jako hash (argon2)
+- Ochrona przed HTML Injection / XSS (escapeHtml)
+- Kontrola dostępu do edycji i usuwania postów
+- Sesje użytkowników z ograniczonym czasem życia
 
-Uruchomienie serwera:
+# Instalacja i uruchomienie
+
+Musisz mieć: 
+- Node.js
+- npm
+
+W terminalu wpisujesz 
+npm install
+
+Aby zainstalować gotowe posty wpisz w terminal
+npm run seed
+
+Stworzy to konta: 
+- admin 
+- user1 
+z hasłami 
+- haslo123
+
+Żeby uruchomić w terminalu wpisujesz 
 node app.js
 
-Adres lokalny:
-http://localhost:8000
+Wyświetli się link na który trzymając (lewy) ctrl naciskasz. Przenosi cie to na przeglądarke
 
-Testowanie aplikacji
-W celu szybkiego przetestowania funkcji, po uruchomieniu serwera można wejść pod adres:
-http://localhost:8000/populate
 
-Spowoduje to utworzenie przykładowych kont:
-Administrator: login: admin, hasło: haslo123
-Użytkownik: login: user1, hasło: haslo123
+# Struktura projektu
+projekt04 /
+|--- app.js
+|--- database.js
+|--- seed.js
+|--- baza.db
+|--- public/
+|   |--- style.css
+|--- package.json
+|--- README.md
 
-Struktura projektu
-app.js: Główny plik aplikacji zawierający konfigurację i trasy.
-database.js: Konfiguracja połączenia z bazą danych i inicjalizacja tabel.
-public/style.css: Style CSS obsługujące wygląd kontenerów oraz tryby kolorystyczne.

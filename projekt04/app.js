@@ -1,355 +1,368 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const session = require('express-session');
-const db = require('./database'); 
 const cookieParser = require('cookie-parser');
+const argon2 = require('argon2');
+const db = require('./database');
+
 
 const app = express();
 
-app.use(cookieParser());
-app.use(express.urlencoded({ extended: true })); //przyjmuje dane z form
-app.use(express.static('public')); //ufa publikowi
-
-//pamieta uzytkownika
-app.use(session({
-  secret: 'tajne_haslo',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { maxAge: 600000 } //10min
-}));
-
-//ekspres dziala z formularzem
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
+app.use(cookieParser());
 
-function layout(content, theme = 'light-mode') { //szablon css
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <link rel="stylesheet" href="/style.css">
-        <title>Tablica Ogłoszeń</title>
-    </head>
-    <body class="${theme}">
-        <div class="container">
-            ${content}
-        </div>
+app.use(
+  session({
+    secret: 'zmien_to_na_env',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 600000 }
+  })
+);
 
-        <div id="cookie-banner" style="position:fixed; bottom:0; width:100%; background:#333; color:white; padding:10px; text-align:center; font-size:12px;">
-            Ta strona używa ciasteczek do zapamiętywania Twojego motywu. 
-            <button onclick="document.getElementById('cookie-banner').style.display='none'" style="cursor:pointer">Rozumiem</button>
-        </div>
-
-
-    </body>
-    </html>`;
+// xss
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
-//glowna
+//ciastka
+function layout(content, theme = 'light-mode', cookiesOk = false) {
+  return `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/style.css">
+    <title>Tablica Ogłoszeń</title>
+  </head>
+  <body class="${theme}">
+    <div class="container">
+      ${content}
+    </div>
+
+    ${cookiesOk ? '' : `
+      <div id="cookie-banner" style="position:fixed; bottom:0; width:100%; background:#333; color:white; padding:10px; text-align:center; font-size:12px;">
+        Ta strona używa ciasteczek do zapamiętywania Twojego motywu.
+
+        <button onclick="
+          document.getElementById('cookie-banner').style.display='none';
+          document.cookie='cookies=ok; path=/';
+        " style="cursor:pointer">
+          Rozumiem
+        </button>
+      </div>
+    `}
+  </body>
+  </html>
+  `;
+}
+
+// glowna
 app.get('/', (req, res) => {
-    const theme = req.cookies.theme || 'light-mode';
+  const theme = req.cookies.theme || 'light-mode';
 
-  let nawigacja = '<h1>Strona Główna</h1>';
-  nawigacja += '<nav>'; //zacznij nawigacje
+  let html = `<h1>Strona główna</h1><nav>`;
 
-  nawigacja += '<a href="/all">NAJNOWSZE OGŁOSZENIA</a> <br>';
-  nawigacja += '<a href="/toggle-theme">Zmień tryb</a><br><br>';
+  html += `<a href="/all">Ogłoszenia</a> | `;
+  html += `<a href="/toggle-theme">Zmień tryb</a><br><br>`;
 
   if (req.session.userId) {
-    nawigacja += `| Witaj <b>${req.session.userLogin}</b>! |<br> `;
-    nawigacja += '<a href="/all">Tablica ogłoszeń</a> | ';
-    nawigacja += '<a href="/profile">Mój Profil</a> | ';
-    nawigacja += '<a href="/add">Dodaj post</a> | ';
-    nawigacja += '<a href="/logout">Wyloguj</a>';
+    html += `Witaj <b>${escapeHtml(req.session.userLogin)}</b><br>`;
+    html += `<a href="/profile">Profil</a> | <a href="/logout">Wyloguj</a>`;
   } else {
-    nawigacja += '<a href="/login">Logowanie</a> | ';
-    nawigacja += '<a href="/register">Rejestracja</a>';
+    html += `<a href="/login">Login</a> | <a href="/register">Rejestracja</a>`;
   }
 
-  //zamknij nawigacje
-  nawigacja += '</nav>';
-  nawigacja += '<p>Witaj w aplikacji! Skorzystaj z menu</p>';
+  html += `</nav>`;
 
-
-  res.send(layout(nawigacja, theme));
+  res.send(layout(html, theme, req.cookies.cookies === 'ok'));
 });
 
-
-//rejestracja wizualnie
+// rejestracja
 app.get('/register', (req, res) => {
-    const theme = req.cookies.theme || 'light-mode';
-  const nawigacja = `
-    <h2>Rejestracja</h2>
-    <form action="/register" method="POST">
-      <input type="text" name="login" placeholder="Login" required><br>
-      <input type="password" name="password" placeholder="Hasło" required><br>
-      <button type="submit">Załóż konto</button>
-    </form>
-    <a href="/">Wróć</a>`;
-    res.send(layout(nawigacja, theme));
-});
-
-//rejestracja haslo
-app.post('/register', async (req, res) => { //async pozwala robicf inne rzeczy
-  const { login, password } = req.body;
   const theme = req.cookies.theme || 'light-mode';
-  
-  //bcrypt dodaje znaki do hasla
-  const salt = await bcrypt.genSalt(10);  //await czeka na wynik
-  const hashedPassword = await bcrypt.hash(password, salt);
 
-  db.run(`INSERT INTO users (login, password) VALUES (?, ?)`, [login, hashedPassword], function(err) {
-    if (err) return res.send("Błąd: Login zajęty!");
+  res.send(layout(`
+    <h2>Rejestracja</h2>
 
-    req.session.userId = this.lastID; 
-    req.session.userLogin = login;
-    req.session.isAdmin = 0;
-
-    const sukcesHtml = `
-      <h1>Konto założone!</h1>
-      <p>Witaj <b>${login}</b>, od razu Cię zalogowaliśmy.</p>
-      <hr>
-      <a href="/">Przejdź do strony głównej</a>
-    `;
-    
-    res.send(layout(sukcesHtml, theme));
-  });
+    <form method="POST">
+      <input name="login" placeholder="Login" required><br>
+      <input name="password" type="password" placeholder="Hasło" required><br>
+      <input name="confirm" type="password" placeholder="Powtórz hasło" required><br>
+      <button>Rejestruj</button>
+    </form>
+  `, theme, req.cookies.cookies === 'ok'));
 });
 
-//logowanie wizualne
-app.get('/login', (req, res) => {
-    const theme = req.cookies.theme || 'light-mode';
-  res.send(`
-    <html>
-    <head><link rel="stylesheet" href="/style.css"></head>
-    <body class="${theme}">
-        <div class="container">
-            <h2>Logowanie</h2>
-            <form action="/login" method="POST">
-                <input name="login" placeholder="Login" required><br>
-                <input name="password" type="password" placeholder="Hasło" required><br>
-                <button type="submit">Zaloguj</button>
-            </form>
-            <p><a href="/">Wróć do strony głównej</a></p>
+app.post('/register', async (req, res) => {
+  const { login, password, confirm } = req.body;
+
+  if (password !== confirm) {
+    return res.send("Hasła nie są identyczne");
+  }
+
+  const hash = await argon2.hash(password);
+
+  db.run(
+    `INSERT INTO users (login, password) VALUES (?, ?)`,
+    [login, hash],
+    function (err) {
+      if (err) {
+        return res.send(layout(`
+          <div class="error">
+          Login jest już zajęty
         </div>
-    </body>
-    </html>`);
+        <a href="/register">Wróć</a>
+        `));
+      }
+
+      req.session.regenerate(() => {
+        req.session.userId = this.lastID;
+        req.session.userLogin = login;
+        req.session.isAdmin = 0;
+
+        res.redirect('/profile');
+      });
+    }
+  );
 });
 
-//sprawdza haslo
+//zaloguj
+app.get('/login', (req, res) => {
+  const theme = req.cookies.theme || 'light-mode';
+
+  res.send(layout(`
+    <h2>Login</h2>
+
+    <form method="POST">
+      <input name="login" required placeholder="Login">
+      <input name="password" type="password" required placeholder="Hasło">
+      <button>Zaloguj</button>
+    </form>
+
+    <p>
+      Nie masz konta?
+      <a href="/register">Zarejestruj się tutaj</a>
+    </p>
+  `, theme, req.cookies.cookies === 'ok'));
+});
+
 app.post('/login', (req, res) => {
   const { login, password } = req.body;
 
-  //szuka nas w bazie
   db.get(`SELECT * FROM users WHERE login = ?`, [login], async (err, user) => {
-    if (err || !user) {
-      return res.send("Nie znaleziono użytkownika lub błąd bazy.");
+    if (!user) {
+      return res.send(layout(`
+        <h2>Ten użytkownik nie istnieje.</h2>
+        <p>Nie masz konta?</p>
+        <a href="/register">Zarejestruj się tutaj</a>
+      `, 'light-mode', req.cookies.cookies === 'ok'));
     }
 
-    const match = await bcrypt.compare(password, user.password);
+    const ok = await argon2.verify(user.password, password);
 
-    if (match) {
-      //zpisuje dane do sesji
+    if (!ok) return res.send("Błędne hasło");
+
+    req.session.regenerate(() => {
       req.session.userId = user.id;
       req.session.userLogin = user.login;
       req.session.isAdmin = user.isAdmin;
-      res.redirect('/profile'); //przekierowywanie
-    } else {
-      res.send("Błędne hasło");
-    }
+
+      res.redirect('/profile');
     });
+  });
 });
 
-//profil
+// konto
 app.get('/profile', (req, res) => {
-    const theme = req.cookies.theme || 'light-mode';
-  if (req.session.userId) {
-    let html = `<h1>Profil użytkownika</h1>`;
-        html += `<p>Jesteś zalogowany jako: <b>${req.session.userLogin}</b></p>`;
-        html += `<p>Ranga: ${req.session.isAdmin ? '<span style="color:gold">Admin</span>' : 'Użytkownik'}</p>`;
-        html += `<hr>`;
-        html += `<nav>
-        <a href="/">Strona Główna</a> | 
-        <a href="/all">Tablica Ogłoszeń</a> | 
-        <a href="/add">Dodaj Post</a> | 
-        <a href="/logout" style="color:red">Wyloguj się</a>
-      </nav>`;
-      res.send(layout(html, theme));
-  } else {
-    res.send('Musisz się najpierw <a href="/login">zalogować</a>');
-  }
-});
-
-//wylog
-app.get('/logout', (req, res) => {
-    const theme = req.cookies.theme || 'light-mode';
-  req.session.destroy((err) => {
-        if (err) {
-            console.log("Błąd przy wylogowywaniu:", err);
-        }
-        res.clearCookie('connect.sid');
-  res.redirect('/');     //powrot na glowna
-  res.send(layout(html, theme));
-}); 
-});
-
-
-//dodaj
-app.get('/add', (req, res) => {
-    const theme = req.cookies.theme || 'light-mode';
   if (!req.session.userId) return res.redirect('/login');
-  
-  res.send(`
-    <h2>Dodaj nowe ogłoszenie</h2>
-    <form action="/add" method="POST">
-      <textarea name="content" placeholder="Treść ogłoszenia..." required></textarea><br>
-      <button type="submit">Opublikuj</button>
-    </form>
-  `, req.cookies.theme);
-  res.send(layout(html, theme));
-});
 
-//dodaj 
-app.post('/add', (req, res) => {
-  if (!req.session.userId) return res.status(401).send("Zaloguj się!");
+  const theme = req.cookies.theme || 'light-mode';
 
-  const content = req.body.content;
-  const userId = req.session.userId;
+  db.get(
+    `SELECT * FROM users WHERE id = ?`,
+    [req.session.userId],
+    (err, user) => {
+      if (!user) return res.redirect('/login');
 
-  db.run(`INSERT INTO posts (content, userId) VALUES (?, ?)`, [content, userId], (err) => {
-    if (err) return res.send("Błąd bazy");
-    res.send("Dodano ogłoszenie! <a href='/profile'>Wróć do profilu</a><a href='/all'>Zobacz ogłoszenia</a>");
-  });
-});
+      res.send(layout(`
+        <h2>Profil</h2>
 
-//alles
-app.get('/all', (req, res) => {
-    const theme = req.cookies.theme || 'light-mode';
-  //wyciaga ogloszenie i laczy z loginem
-  const sql = `SELECT posts.id, posts.content, posts.userId, users.login 
-    FROM posts JOIN users ON posts.userId = users.id`;
+        <p>Login: <b>${escapeHtml(user.login)}</b></p>
+        <p>ID: ${user.id}</p>
+        <p>Rola: ${user.isAdmin ? 'Admin' : 'Użytkownik'}</p>
 
-  db.all(sql, [], (err, rows) => {
-    if (err) return res.send("Błąd pobierania");
-
-    let html = "<h1>Tablica ogłoszeń</h1>";
-      if (req.session.userId) {
-      html += "<a href='/add'>+ Dodaj nowe ogłoszenie</a>";
-    } else {
-      html += "<p><i>Zaloguj się, aby dodać własne ogłoszenie.</i></p>";
-    } //+= dokleja tresc
-    
-    html += "<hr>";
-  
-        html += "<nav><a href='/'>Strona główna</a> </nav><hr>";
-        
-        rows.forEach(post => {
-            html += `<div class="post">
-                <strong>${post.login}:</strong> ${post.content}`;
-      //uprawnienia
-      if (req.session.userId) {
-        const czyToMoje = req.session.userId === post.userId;
-        const czyJestemAdminem = req.session.isAdmin === 1;
-
-        if (czyToMoje || czyJestemAdminem) {
-          html += `<a href="/edit/${post.id}">[Edytuj]</a> `;
-          html += `<a href="/delete/${post.id}" style="color:red">[Usuń]</a>`;
-        }
-      }
-      html += `</div><hr>`;
-    });
-
-    html += '<br><a href="/profile">Powrót na profil</a>';
-    html += '<br><a href="/">Wróć do strony głównej</a>';
-    res.send(`
-        <html>
-        <head><link rel="stylesheet" href="/style.css"></head>
-        <body class="${theme}">
-            <div class="container">
-                ${html}
-            </div>
-        </body>
-        </html>`);
-  });
-});
-
-//usuwanie
-app.get('/delete/:id', (req, res) => {
-    const theme = req.cookies.theme || 'light-mode';
-  if (!userId) return res.send("Zaloguj się!");
-    
-  const postId = req.params.id;//params przyjmuje id(?)
-  //zeby nie usuwac cudzych postow chb ze admin
-  db.run(`DELETE FROM posts WHERE id = ? AND (userId = ? OR ?)`, [postId, userId, isAdmin], (err) => {
-    if (err) return res.send("Błąd usuwania");
-    res.redirect('/all');
-    res.send(layout(html, theme));
-  });
-});
-
-
-//edycja na stronie
-app.get('/edit/:id', (req, res) => {
-    const theme = req.cookies.theme || 'light-mode';
-  const postId = req.params.id;
-  db.get(`SELECT * FROM posts WHERE id = ?`, [postId], (err, post) => {
-    if (!post) return res.send("Nie ma takiego posta");
-    
-    //czy moze
-    if (post.userId !== req.session.userId && !req.session.isAdmin) {
-      return res.send("Nie masz uprawnień!");
+        <hr>
+        <a href="/all">Ogłoszenia</a> |
+        <a href="/">Strona główna</a>
+      `, theme, req.cookies.cookies === 'ok'));
     }
+  );
+});
 
-    res.send(`
-      <h2>Edytuj ogłoszenie</h2>
-      <form action="/edit/${post.id}" method="POST">
-        <textarea name="content">${post.content}</textarea><br>
-        <button type="submit">Zapisz zmiany</button>
-      </form>
-    `);
-    res.send(layout(html, theme));
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie('connect.sid');
+    res.redirect('/');
   });
 });
 
+//dodaj ogloszenei
+app.get('/add', (req, res) => {
+  if (!req.session.userId) return res.redirect('/login');
 
-//edycja w bazie
+  const theme = req.cookies.theme || 'light-mode';
+
+  res.send(layout(`
+    <h2>Dodaj ogłoszenie</h2>
+
+    <form method="POST">
+      <textarea name="content" required placeholder="Treść ogłoszenia..."></textarea><br>
+      <button>Dodaj</button>
+    </form>
+
+    <br>
+    <a href="/all">Wróć do ogłoszeń</a>
+  `, theme, req.cookies.cookies === 'ok'));
+});
+
+app.post('/add', (req, res) => {
+  if (!req.session.userId) return res.redirect('/login');
+
+  db.run(
+    `INSERT INTO posts (content, userId) VALUES (?, ?)`,
+    [req.body.content, req.session.userId],
+    () => {
+      res.send(layout(`
+        <h2>Ogłoszenie dodane</h2>
+
+        <p>Twój post został opublikowany.</p>
+
+        <a href="/all">Zobacz ogłoszenia</a><br>
+        <a href="/add">Dodaj kolejne</a><br>
+        <a href="/">Strona główna</a>
+      `, req.cookies.theme || 'light-mode', req.cookies.cookies === 'ok'));
+    }
+  );
+});
+
+
+
+// posty
+app.get('/all', (req, res) => {
+  const theme = req.cookies.theme || 'light-mode';
+
+  db.all(
+    `SELECT posts.*, users.login
+     FROM posts JOIN users ON posts.userId = users.id`,
+    [],
+    (err, rows) => {
+      let html = `<h1>Tablica ogłoszeń</h1>
+        <a href="/">Strona główna</a>
+        <a href="/add">Dodaj</a>
+        <hr>`;
+
+      rows.forEach(p => {
+        html += `
+          <div class="post">
+            <b>${escapeHtml(p.login)}</b>: ${escapeHtml(p.content)}
+        `;
+
+        if (req.session.userId === p.userId || req.session.isAdmin) {
+          html += `
+            <a href="/delete/${p.id}">Usuń</a>
+            <a href="/edit/${p.id}">Edytuj</a>
+          `;
+        }
+
+        html += `</div><hr>`;
+      });
+
+      res.send(layout(html, theme, req.cookies.cookies === 'ok'));
+    }
+  );
+});
+
+//usun
+app.get('/delete/:id', (req, res) => {
+  const id = req.params.id;
+
+  db.run(
+    `DELETE FROM posts WHERE id = ? AND (userId = ? OR ? = 1)`,
+    [id, req.session.userId, req.session.isAdmin],
+    () => res.redirect('/all')
+  );
+});
+
+//edycja
+app.get('/edit/:id', (req, res) => {
+  const theme = req.cookies.theme || 'light-mode';
+
+  db.get(
+    `SELECT * FROM posts WHERE id = ?`,
+    [req.params.id],
+    (err, post) => {
+      if (!post) return res.send("Brak posta");
+
+      if (post.userId !== req.session.userId && !req.session.isAdmin) {
+        return res.send(layout(`
+          <h2>Brak uprawnień</h2>
+          <a href="/all">Wróć</a>
+        `, theme, req.cookies.cookies === 'ok'));
+      }
+
+      res.send(layout(`
+        <h2>Edytuj ogłoszenie</h2>
+
+        <form method="POST">
+          <textarea name="content" required>${escapeHtml(post.content)}</textarea><br>
+          <button>Zapisz zmiany</button>
+        </form>
+
+        <br>
+        <a href="/all">Wróć</a>
+      `, theme, req.cookies.cookies === 'ok'));
+    }
+  );
+});
+//admin szpont
 app.post('/edit/:id', (req, res) => {
-  const postId = req.params.id;
-  const newContent = req.body.content;
-  const userId = req.session.userId;
-  const isAdmin = req.session.isAdmin;
+  if (!req.session.userId) return res.redirect('/login');
 
-  db.run(`UPDATE posts SET content = ? WHERE id = ? AND (userId = ? OR ?)`, 
-    [newContent, postId, userId, isAdmin], (err) => {
-    if (err) return res.send("Błąd zapisu");
-    res.redirect('/all');
-  });
+  db.run(
+    `UPDATE posts SET content = ? WHERE id = ?`,
+    [req.body.content, req.params.id],
+    () => {
+      res.send(layout(`
+        <h2 style="color:green">Post zmieniony</h2>
+
+        <p>
+          ${req.session.isAdmin
+            ? "Admin ingerował w treść posta"
+            : "Twoje zmiany zostały zapisane"}
+        </p>
+
+        <a href="/all">Wróć do ogłoszeń</a>
+      `, req.cookies.theme || 'light-mode', req.cookies.cookies === 'ok'));
+    }
+  );
 });
 
-
-//kolorki
+//czarne biale
 app.get('/toggle-theme', (req, res) => {
-    const current = req.cookies.theme || 'light-mode';
-    const next = current === 'light-mode' ? 'dark-mode' : 'light-mode';
-    res.cookie('theme', next, { maxAge: 365 * 24 * 60 * 60 * 1000, httpOnly: true }); //rok
+  const current = req.cookies.theme || 'light-mode';
+  const next = current === 'light-mode' ? 'dark-mode' : 'light-mode';
 
-    //wroc skad przyszedles
-    const backURL = req.header('Referer') || '/';
-    res.redirect(backURL); 
+  res.cookie('theme', next, { maxAge: 365 * 24 * 60 * 60 * 1000 });
+
+  res.redirect('/');
 });
 
-
-//testowe
-app.get('/populate', async (req, res) => {
-  const salt = await bcrypt.hash('haslo123', 10);
-  db.run(`INSERT OR IGNORE INTO users (login, password, isAdmin) VALUES ('admin', '${salt}', 1)`);
-  db.run(`INSERT OR IGNORE INTO users (login, password, isAdmin) VALUES ('user1', '${salt}', 0)`, function() {
-      db.run(`INSERT INTO posts (content, userId) VALUES ('Co ja tu robie!', 1)`);
-      db.run(`INSERT INTO posts (content, userId) VALUES ('Zgubił mi się dziadek.', 2)`);
-      res.send("<h1>Baza wypełniona!</h1><p>Admin: admin / haslo123</p><p>User: user1 / haslo123</p><a href='/'>Wróć</a>");
-  });
-});
-
-
-
-app.listen(8000, () => console.log('Działa na http://localhost:8000'));
+app.listen(8000, () =>
+  console.log('Serwer stoi http://localhost:8000')
+);
