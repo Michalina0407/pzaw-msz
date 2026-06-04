@@ -108,3 +108,14 @@ button:hover {
     margin: 10px 0;
     font-weight: bold;
 }
+
+.cookie-banner {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #333;
+  color: white;
+  padding: 10px;
+  text-align: center;
+  font-size: 12px;
+}

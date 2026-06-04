@@ -2,7 +2,7 @@
 
 Prosta aplikacja webowa do zarządzania ogłoszeniami napisana w Node.js z użyciem Express oraz SQLite. Projekt umożliwia rejestrację użytkowników, logowanie oraz tworzenie, edycję i usuwanie ogłoszeń.
 
-# Funkcjonalności
+## Funkcjonalności
 - Rejestracja i logowanie użytkowników
 - Zabezpieczenie haseł
 - System sesji użytkowników
@@ -13,7 +13,7 @@ Prosta aplikacja webowa do zarządzania ogłoszeniami napisana w Node.js z użyc
 - Tryb jasny / ciemny (cookies)
 - Dane testowe (seed bazy)
 
-# Bezpieczeństwo
+## Bezpieczeństwo
 - Hasła przechowywane jako hash (argon2)
 - Ochrona przed HTML Injection / XSS (escapeHtml)
 - Kontrola dostępu do edycji i usuwania postów
@@ -21,15 +21,17 @@ Prosta aplikacja webowa do zarządzania ogłoszeniami napisana w Node.js z użyc
 
 # Instalacja i uruchomienie
 
-Musisz mieć: 
+## Wymagania
 - Node.js
 - npm
 
-W terminalu wpisujesz 
-npm install
+## Instalacja 
+W terminalu należy wpisać:
+``npm install``
 
-Aby zainstalować gotowe posty wpisz w terminal
-npm run seed
+## Utworzenie danych testowych
+Również w terminalu: 
+``npm run seed``
 
 Stworzy to konta: 
 - admin 
@@ -37,15 +39,21 @@ Stworzy to konta:
 z hasłami 
 - haslo123
 
-Żeby uruchomić w terminalu wpisujesz 
-node app.js
+## Uruchomienie
+W terminalu należy wpisać
+``node app.js``
 
-Wyświetli się link na który trzymając (lewy) ctrl naciskasz. Przenosi cie to na przeglądarke
+Wyświetli się link 
+http://localhost:8000
+na który trzymając (lewy) ctrl naciskasz. Przenosi cie to na przeglądarke
 
 
-# Struktura projektu
+## Struktura projektu
 projekt04 /
 |--- app.js
+|--- routes/
+|   |--- auth.js
+|   |--- posts.js
 |--- database.js
 |--- seed.js
 |--- baza.db
